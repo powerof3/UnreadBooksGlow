@@ -1,0 +1,19 @@
+{
+  "name": "unread-books-glow",
+  "version-string": "1.0.0",
+  "description": "",
+  "homepage": "",
+  "license": "GPL-3.0-only",
+  "dependencies": [
+    "clib-util",
+    "glaze",
+    "rsm-mmio",
+    "rsm-binary-io",
+    {
+      "name": "spdlog",
+      "features": [ "wchar" ]
+    },
+    "xbyak"
+  ],
+  "builtin-baseline": "275a29dcdb864aa9ce57042eadf95f4a28482280"
+}
