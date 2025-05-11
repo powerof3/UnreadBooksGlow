@@ -91,10 +91,10 @@ void Manager::MarkAsRead(RE::TESObjectBOOK* a_book)
 }
 
 RE::TESEffectShader* Manager::GetShaderForBook(RE::TESObjectBOOK* a_book) const
-{
+{	
 	if ((a_book->data.flags & 1) != 0) {
 		return scrollShader.shader;
-	} else if (a_book->data.teaches != -1) {
+	} else if (a_book->data.teaches != 255) {
 		return skillBookShader.shader;
 	} else {
 		return bookShader.shader;
