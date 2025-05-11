@@ -158,11 +158,6 @@ std::optional<std::filesystem::path> Manager::GetSaveDirectory()
 	saveFolder = knownPath.get();
 	*saveFolder /= std::format("My Games/{}/Saved/SaveGames", OBSE::GetSaveFolderName());
 
-	std::error_code ec;
-	if (!std::filesystem::exists(*saveFolder, ec)) {
-		std::filesystem::create_directory(*saveFolder);
-	}
-
 	return saveFolder;
 }
 
@@ -255,6 +250,11 @@ void Manager::CleanupDatabase()
 	}
 
 	*savePath /= "UnreadBooksGlow";
+
+	std::error_code ec;
+	if (!std::filesystem::exists(*savePath, ec)) {
+		std::filesystem::create_directory(*savePath);
+	}
 
 	std::vector<std::filesystem::path> missingFiles;
 
