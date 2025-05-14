@@ -44,7 +44,8 @@ private:
 	RE::TESEffectShader* GetShaderForBook(RE::TESObjectBOOK* a_book) const;
 
 	std::optional<std::filesystem::path> GetSaveDirectory();
-	std::optional<std::filesystem::path> GetSavePath(const std::string& a_fileName);
+	std::optional<std::filesystem::path> GetSaveDirectoryUBG();
+	std::optional<std::filesystem::path> GetSavePathUBG(const std::string& a_fileName);
 
 	// members
 	Shader bookShader{};
@@ -55,4 +56,5 @@ private:
 	std::set<FormIDMod>               readBooksSerialized{};
 
 	std::optional<std::filesystem::path> saveFolder{};
+	std::optional<std::filesystem::path> saveFolderUBG{};
 };

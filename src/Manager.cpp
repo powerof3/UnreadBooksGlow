@@ -8,8 +8,8 @@ void Manager::ReadSettings()
 	std::wstring path{};
 
 	std::error_code ec;
-	if (!std::filesystem::exists(obsePath)) {
-		if (!std::filesystem::exists(rootPath)) {
+	if (!std::filesystem::exists(obsePath, ec)) {
+		if (!std::filesystem::exists(rootPath), ec) {
 			REX::WARN("OBSE\\Plugins folder not found ({})", ec.message());
 			return;
 		} else {
@@ -103,6 +103,10 @@ RE::TESEffectShader* Manager::GetShaderForBook(RE::TESObjectBOOK* a_book) const
 
 void Manager::MarkAsRead(RE::TESObjectREFR* a_ref, RE::TESObjectBOOK* a_book)
 {
+	if (!a_book) {
+		return;
+	}
+	
 	MarkAsRead(a_book);
 
 	if (auto shader = GetShaderForBook(a_book)) {
@@ -161,9 +165,37 @@ std::optional<std::filesystem::path> Manager::GetSaveDirectory()
 	return saveFolder;
 }
 
-std::optional<std::filesystem::path> Manager::GetSavePath(const std::string& a_fileName)
+std::optional<std::filesystem::path> Manager::GetSaveDirectoryUBG()
 {
-	auto bevePath = GetSaveDirectory();
+	if (saveFolderUBG) {
+		return saveFolderUBG;
+	}
+	
+	constexpr auto obsePath = L"OBSE\\Plugins";
+	constexpr auto rootPath = L"OblivionRemastered\\Binaries\\Win64\\OBSE\\Plugins";
+
+	std::wstring path{};
+
+	std::error_code ec;
+	if (!std::filesystem::exists(obsePath, ec)) {
+		if (!std::filesystem::exists(rootPath), ec) {
+			REX::WARN("OBSE\\Plugins folder not found ({})", ec.message());
+			return {};
+		} else {
+			path = rootPath;
+		}
+	} else {
+		path = obsePath;
+	}
+
+	saveFolderUBG = path;
+
+	return saveFolderUBG;
+}
+
+std::optional<std::filesystem::path> Manager::GetSavePathUBG(const std::string& a_fileName)
+{
+	auto bevePath = GetSaveDirectoryUBG();
 
 	if (!bevePath) {
 		return {};
@@ -176,7 +208,7 @@ std::optional<std::filesystem::path> Manager::GetSavePath(const std::string& a_f
 
 void Manager::SaveDatabase(const std::string& path)
 {
-	auto savePath = GetSavePath(path);
+	auto savePath = GetSavePathUBG(path);
 
 	if (!savePath) {
 		return;
@@ -194,24 +226,22 @@ void Manager::SaveDatabase(const std::string& path)
 
 void Manager::LoadDatabase(const std::string& path)
 {
-	auto savePath = GetSavePath(path);
+	auto savePath = GetSavePathUBG(path);
 
 	if (!savePath) {
 		return;
 	}
 
+	REX::INFO("Loading {}", savePath->string());
+
 	readBooks.clear();
 	readBooksSerialized.clear();
-
-	std::error_code err;
-	if (std::filesystem::exists(*savePath, err)) {
-		std::string buffer;
-		auto        ec = glz::read_file_beve(readBooksSerialized, savePath->string(), buffer);
-		if (ec) {
-			REX::WARN("\tFailed to load {} file (error: {})", path, glz::format_error(ec, buffer));
-		}
-	} else {
-		REX::WARN("\tFailed to load {} file (error: {})", path, err.value());
+	
+	std::string buffer;
+	auto        ec = glz::read_file_beve(readBooksSerialized, savePath->string(), buffer);
+	if (ec) {
+		REX::WARN("\tFailed to load {} file (error: {})", path, glz::format_error(ec, buffer));
+		return;
 	}
 
 	for (auto& [formID, modName] : readBooksSerialized) {
@@ -220,12 +250,12 @@ void Manager::LoadDatabase(const std::string& path)
 		}
 	}
 
-	REX::INFO("Loading {} ({} books read)", savePath->string(), readBooks.size());
+	REX::INFO("\t{} books read", readBooks.size());
 }
 
 void Manager::DeleteDatabase(const std::string& path)
 {
-	auto savePath = GetSavePath(path);
+	auto savePath = GetSavePathUBG(path);
 
 	if (!savePath) {
 		return;
@@ -244,7 +274,7 @@ void Manager::DeleteDatabase(const std::string& path)
 
 void Manager::CleanupDatabase()
 {
-	auto savePath = GetSaveDirectory();
+	auto savePath = GetSaveDirectoryUBG();
 	if (!savePath) {
 		return;
 	}
@@ -253,7 +283,11 @@ void Manager::CleanupDatabase()
 
 	std::error_code ec;
 	if (!std::filesystem::exists(*savePath, ec)) {
-		std::filesystem::create_directory(*savePath);
+		std::filesystem::create_directory(*savePath, ec);
+		if (ec) {
+			REX::WARN("\tFailed to create UnreadBooksGlow directory (error: {})", ec.message());
+			return;
+		}
 	}
 
 	std::vector<std::filesystem::path> missingFiles;

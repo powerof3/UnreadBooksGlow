@@ -7,8 +7,8 @@ struct Hook_LoadGraphics
 	{
 		auto result = LoadGraphicsFuncHook(a_ref);
 
-		auto baseObject = a_ref->GetBaseObject();
-		if (auto book = baseObject->As<RE::TESObjectBOOK>()) {
+		auto baseObject = a_ref ? a_ref->GetBaseObject() : nullptr;
+		if (auto book = baseObject ? baseObject->As<RE::TESObjectBOOK>() : nullptr) {
 			Manager::GetSingleton()->ApplyBookShader(a_ref, book);
 		}
 
