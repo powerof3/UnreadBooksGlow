@@ -11,7 +11,7 @@ struct FormIDMod
 {
 	bool operator==(const FormIDMod& lhs) const
 	{
-		return (formID == lhs.formID) && modName == lhs.modName;
+		return std::tie(formID, modName) == std::tie(lhs.formID, lhs.modName);
 	}
 
 	bool operator<(const FormIDMod& lhs) const

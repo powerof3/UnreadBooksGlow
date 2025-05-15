@@ -274,33 +274,55 @@ void Manager::DeleteDatabase(const std::string& path)
 
 void Manager::CleanupDatabase()
 {
-	auto savePath = GetSaveDirectoryUBG();
-	if (!savePath) {
+	auto savePathUBG = GetSaveDirectoryUBG();
+	if (!savePathUBG) {
 		return;
 	}
 
-	*savePath /= "UnreadBooksGlow";
+	*savePathUBG /= "UnreadBooksGlow";
 
 	std::error_code ec;
-	if (!std::filesystem::exists(*savePath, ec)) {
-		std::filesystem::create_directory(*savePath, ec);
+	if (!std::filesystem::exists(*savePathUBG, ec)) {
+		std::filesystem::create_directory(*savePathUBG, ec);
 		if (ec) {
 			REX::WARN("\tFailed to create UnreadBooksGlow directory (error: {})", ec.message());
 			return;
 		}
 	}
 
+	auto saveDir = GetSaveDirectory();
+	if (!saveDir || !std::filesystem::exists(*saveDir, ec) || std::filesystem::is_empty(*saveDir, ec)) {
+		REX::WARN("\tFailed to read save directory (error: {}). Disabling orphan save cleanup", ec.message());
+		return;
+	}
+
+	bool saveFilesExist = false;
+	for (const auto iterator = std::filesystem::directory_iterator(*saveDir); const auto& entry : iterator) {
+		if (entry.exists()) {
+			if (const auto& path = entry.path(); !path.empty() && (path.extension() == ".sav"sv)) {
+				if (path.filename() == "Save_Settings.sav" || path.filename() == "saves_meta.sav") {
+					continue;
+				}
+				saveFilesExist = true;
+				break;
+			}
+		}
+	}
+	if (!saveFilesExist) {
+		REX::WARN("\tNo save files exist in save directory (error: {}). Disabling orphan save cleanup", ec.message());
+		return;
+	}
+
 	std::vector<std::filesystem::path> missingFiles;
 
-	for (const auto iterator = std::filesystem::directory_iterator(*savePath); const auto& entry : iterator) {
+	for (const auto iterator = std::filesystem::directory_iterator(*savePathUBG); const auto& entry : iterator) {
 		if (entry.exists()) {
 			if (const auto& path = entry.path(); !path.empty() && (path.extension() == ".beve"sv)) {
-				auto saveDir = GetSaveDirectory();
-				*saveDir /= path.filename().string();
-				saveDir->replace_extension(".sav");
+				auto savePath = GetSaveDirectory();
+				*savePath /= path.filename().string();
+				savePath->replace_extension(".sav");
 
-				std::error_code err;
-				if (!std::filesystem::exists(*saveDir, err)) {
+				if (!std::filesystem::exists(*savePath, ec)) {
 					missingFiles.push_back(path);
 				}
 			}
@@ -308,8 +330,7 @@ void Manager::CleanupDatabase()
 	}
 
 	for (auto& file : missingFiles) {
-		std::error_code err;
-		std::filesystem::remove(file, err);
-		REX::INFO("Deleting orphaned save file {}", file.string());
+		std::filesystem::remove(file, ec);
+		REX::INFO("Deleting orphaned save file: {}", file.string());
 	}
 }
